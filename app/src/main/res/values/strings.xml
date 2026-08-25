@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">違規記錄器</string>
+    <string name="title_record_list">違規記錄清單</string>
+    <string name="title_report">違規統計報表</string>
+</resources>
