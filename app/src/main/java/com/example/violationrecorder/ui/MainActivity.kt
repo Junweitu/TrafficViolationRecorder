@@ -167,6 +167,6 @@ class MainActivity : AppCompatActivity() {
         )
         viewModel.insert(record)
         Toast.makeText(this, "違規記錄已儲存！", Toast.LENGTH_SHORT).show()
-        binding.etViolationType.text.clear()
+        binding.etViolationType.text?.clear()
     }
 }
