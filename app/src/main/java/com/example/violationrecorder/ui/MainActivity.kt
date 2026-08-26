@@ -52,9 +52,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // 重新整理位置
+        // 重新整理位置（主動要求新的 GPS 定位）
         binding.btnRefreshLocation.setOnClickListener {
-            checkLocationPermissionAndFetch()
+            checkLocationPermissionAndFetch(forceFresh = true)
         }
 
         // 記錄違規
@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkLocationPermissionAndFetch() {
+    private fun checkLocationPermissionAndFetch(forceFresh: Boolean = false) {
         when {
             ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_FINE_LOCATION
@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_COARSE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
-                fetchLocation()
+                fetchLocation(forceFresh)
             }
             else -> {
                 requestLocationPermissionLauncher.launch(
@@ -95,30 +95,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun fetchLocation() {
-        binding.tvLocationStatus.text = "定位中..."
+    private fun fetchLocation(forceFresh: Boolean = false) {
+        // 禁用按鈕避免重複點擊
+        binding.btnRefreshLocation.isEnabled = false
+        binding.tvLocationStatus.text = if (forceFresh) "正在重新定位，請稍候..." else "定位中..."
+
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                val location = withContext(Dispatchers.IO) {
-                    LocationUtil.getCurrentLocation(this@MainActivity)
+                val location = if (forceFresh) {
+                    // 主動要求新的 GPS 定位
+                    LocationUtil.requestFreshLocation(this@MainActivity)
+                } else {
+                    // 初始載入：先取快取位置
+                    LocationUtil.getLastKnownLocation(this@MainActivity)
                 }
+
                 if (location != null) {
                     currentLocation = location
-                    val address = withContext(Dispatchers.IO) {
-                        LocationUtil.getAddressFromLocation(
-                            this@MainActivity,
-                            location.latitude,
-                            location.longitude
-                        )
-                    }
+                    val address = LocationUtil.getAddressFromLocation(
+                        this@MainActivity,
+                        location.latitude,
+                        location.longitude
+                    )
                     currentAddress = address
                     updateLocationUI(location, address)
+                    if (forceFresh) {
+                        Toast.makeText(this@MainActivity, "定位已更新", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
-                    binding.tvLocationStatus.text = "無法取得位置，請確認 GPS 已開啟"
-                    Toast.makeText(this@MainActivity, "無法取得位置，請稍後再試", Toast.LENGTH_SHORT).show()
+                    binding.tvLocationStatus.text = "無法取得位置，請確認 GPS 已開啟並移動到戶外"
+                    Toast.makeText(
+                        this@MainActivity,
+                        if (forceFresh) "定位逾時，請確認 GPS 已開啟" else "無法取得位置，請點擊重新定位",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
                 binding.tvLocationStatus.text = "定位失敗：${e.message}"
+            } finally {
+                binding.btnRefreshLocation.isEnabled = true
             }
         }
     }
