@@ -19,6 +19,10 @@ class ViolationRepository(private val dao: ViolationRecordDao) {
         return dao.insert(record)
     }
 
+    suspend fun insertAll(records: List<ViolationRecord>): List<Long> {
+        return dao.insertAll(records)
+    }
+
     suspend fun update(record: ViolationRecord) {
         dao.update(record)
     }

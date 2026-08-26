@@ -35,6 +35,10 @@ class ViolationViewModel(application: Application) : AndroidViewModel(applicatio
         repository.insert(record)
     }
 
+    fun insertAll(records: List<ViolationRecord>) = viewModelScope.launch(Dispatchers.IO) {
+        repository.insertAll(records)
+    }
+
     fun update(record: ViolationRecord) = viewModelScope.launch(Dispatchers.IO) {
         repository.update(record)
     }

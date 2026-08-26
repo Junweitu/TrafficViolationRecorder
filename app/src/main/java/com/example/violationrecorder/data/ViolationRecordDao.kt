@@ -13,6 +13,9 @@ interface ViolationRecordDao {
     @Insert
     suspend fun insert(record: ViolationRecord): Long
 
+    @Insert
+    suspend fun insertAll(records: List<ViolationRecord>): List<Long>
+
     @Update
     suspend fun update(record: ViolationRecord)
 

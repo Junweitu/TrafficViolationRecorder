@@ -1,6 +1,7 @@
 package com.example.violationrecorder.ui
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -8,15 +9,18 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.violationrecorder.data.ViolationRecord
 import com.example.violationrecorder.databinding.ActivityRecordListBinding
 import com.example.violationrecorder.util.DateUtil
 import com.example.violationrecorder.util.ExcelExporter
+import com.example.violationrecorder.util.ExcelImporter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Calendar
 
 class RecordListActivity : AppCompatActivity() {
@@ -26,12 +30,21 @@ class RecordListActivity : AppCompatActivity() {
     private var selectedDate: String = DateUtil.today()
     private var currentRecords: List<ViolationRecord> = emptyList()
 
-    // SAF：建立檔案（讓使用者選擇儲存位置）
+    // SAF：建立檔案（匯出時讓使用者選擇儲存位置）
     private val createDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     ) { uri: Uri? ->
         if (uri != null) {
             exportRecordsToExcel(uri)
+        }
+    }
+
+    // SAF：開啟檔案（匯入時讓使用者選擇 xlsx 檔案）
+    private val openDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            importRecordsFromExcel(uri)
         }
     }
 
@@ -42,7 +55,7 @@ class RecordListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         setupRecyclerView()
         setupDatePicker()
-        setupExportButton()
+        setupButtons()
         observeRecords()
     }
 
@@ -63,17 +76,39 @@ class RecordListActivity : AppCompatActivity() {
         binding.tvSelectedDate.text = DateUtil.formatDisplayDate(selectedDate)
     }
 
-    private fun setupExportButton() {
+    private fun setupButtons() {
+        // 匯出 Excel
         binding.btnExport.setOnClickListener {
             if (currentRecords.isEmpty()) {
                 Toast.makeText(this, "此日期沒有記錄可匯出", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            // 開啟 SAF 檔案建立器，預設檔名為「違規記錄_日期.xlsx」
             createDocumentLauncher.launch(ExcelExporter.suggestFileName(selectedDate))
+        }
+
+        // 匯入 Excel
+        binding.btnImport.setOnClickListener {
+            openDocumentLauncher.launch(
+                arrayOf(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/octet-stream"
+                )
+            )
+        }
+
+        // 分享：將目前日期的記錄匯出為暫存檔後分享
+        binding.btnShare.setOnClickListener {
+            if (currentRecords.isEmpty()) {
+                Toast.makeText(this, "此日期沒有記錄可分享", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            shareRecordsAsExcel()
         }
     }
 
+    /**
+     * 匯出記錄到使用者選擇的位置
+     */
     private fun exportRecordsToExcel(uri: Uri) {
         binding.btnExport.isEnabled = false
         Toast.makeText(this, "正在匯出...", Toast.LENGTH_SHORT).show()
@@ -103,18 +138,107 @@ class RecordListActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
             } else {
+                Toast.makeText(this@RecordListActivity, "匯出失敗，請重試", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    /**
+     * 從使用者選擇的 xlsx 檔案匯入記錄
+     */
+    private fun importRecordsFromExcel(uri: Uri) {
+        binding.btnImport.isEnabled = false
+        Toast.makeText(this, "正在匯入...", Toast.LENGTH_SHORT).show()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    contentResolver.openInputStream(uri)?.use { inputStream ->
+                        val records = ExcelImporter.importFromExcel(inputStream)
+                        if (records.isNotEmpty()) {
+                            viewModel.insertAll(records)
+                        }
+                        Result.success(records.size)
+                    } ?: Result.failure(Exception("無法開啟檔案"))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Result.failure(e)
+                }
+            }
+
+            binding.btnImport.isEnabled = true
+            result.onSuccess { count ->
+                if (count > 0) {
+                    Toast.makeText(
+                        this@RecordListActivity,
+                        "成功匯入 $count 筆記錄",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        this@RecordListActivity,
+                        "檔案中沒有可匯入的記錄",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }.onFailure {
                 Toast.makeText(
                     this@RecordListActivity,
-                    "匯出失敗，請重試",
+                    "匯入失敗：${it.message}",
                     Toast.LENGTH_LONG
                 ).show()
             }
         }
     }
 
+    /**
+     * 分享：將記錄寫入快取檔案，透過 FileProvider 分享
+     */
+    private fun shareRecordsAsExcel() {
+        binding.btnShare.isEnabled = false
+        Toast.makeText(this, "正在準備分享...", Toast.LENGTH_SHORT).show()
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val fileUri = withContext(Dispatchers.IO) {
+                try {
+                    val cacheDir = cacheDir
+                    val fileName = ExcelExporter.suggestFileName(selectedDate)
+                    val file = File(cacheDir, fileName)
+                    file.outputStream().use { outputStream ->
+                        ExcelExporter.exportToExcel(
+                            outputStream = outputStream,
+                            records = currentRecords,
+                            sheetName = "違規記錄_$selectedDate"
+                        )
+                    }
+                    FileProvider.getUriForFile(
+                        this@RecordListActivity,
+                        "${packageName}.fileprovider",
+                        file
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            }
+
+            binding.btnShare.isEnabled = true
+            if (fileUri != null) {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    putExtra(Intent.EXTRA_STREAM, fileUri)
+                    putExtra(Intent.EXTRA_SUBJECT, "違規記錄_$selectedDate")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(shareIntent, "分享違規記錄"))
+            } else {
+                Toast.makeText(this@RecordListActivity, "分享失敗，請重試", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private fun showDatePicker() {
         val calendar = Calendar.getInstance()
-        // 從 selectedDate 解析
         try {
             val parts = selectedDate.split("-")
             calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())

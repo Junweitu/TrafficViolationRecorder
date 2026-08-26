@@ -6,19 +6,19 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- 日期選擇列 -->
+    <!-- 第一列：日期選擇 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="12dp">
+        android:layout_marginBottom="8dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="選擇日期："
-            android:textSize="14sp"
+            android:textSize="15sp"
             android:textStyle="bold" />
 
         <TextView
@@ -27,8 +27,11 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="今天"
-            android:textSize="14sp"
-            android:layout_marginStart="8dp" />
+            android:textSize="15sp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelectDate"
@@ -36,17 +39,52 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="選擇"
-            android:textSize="12sp"
-            android:layout_marginEnd="8dp" />
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- 第二列：操作按鈕（匯出 / 匯入 / 分享） -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="12dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExport"
             style="@style/Widget.Material3.Button"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="匯出 Excel"
-            android:textSize="12sp"
+            android:layout_weight="1"
+            android:text="匯出"
+            android:textSize="13sp"
+            android:layout_marginEnd="4dp"
             app:icon="@android:drawable/ic_menu_upload"
+            app:iconSize="16sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnImport"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="匯入"
+            android:textSize="13sp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            app:icon="@android:drawable/ic_menu_upload"
+            app:iconSize="16sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnShare"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="分享"
+            android:textSize="13sp"
+            android:layout_marginStart="4dp"
+            app:icon="@android:drawable/ic_menu_share"
             app:iconSize="16sp" />
     </LinearLayout>
 
@@ -77,5 +115,4 @@
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:paddingBottom="16dp" />
-
 </LinearLayout>

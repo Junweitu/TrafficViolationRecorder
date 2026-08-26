@@ -4,7 +4,6 @@
 
     <!-- 網路權限：用於地址反查 -->
     <uses-permission android:name="android.permission.INTERNET" />
-
     <!-- 定位權限 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -40,6 +39,15 @@
             android:label="@string/title_report"
             android:parentActivityName=".ui.MainActivity" />
 
+        <!-- FileProvider：用於分享匯出的 Excel 檔案 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
-
 </manifest>
