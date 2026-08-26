@@ -36,7 +36,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="選擇"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExport"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="匯出 Excel"
+            android:textSize="12sp"
+            app:icon="@android:drawable/ic_menu_upload"
+            app:iconSize="16sp" />
     </LinearLayout>
 
     <TextView

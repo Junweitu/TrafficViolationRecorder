@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.violationrecorder"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     buildTypes {
@@ -61,6 +61,8 @@ dependencies {
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
+    // Excel 匯出（輕量級 xlsx 生成，無 Apache POI 的 AWT 相依問題）
+    implementation("org.dhatim:fastexcel:0.18.4")
 
     // Coroutines test (debug only)
     testImplementation("junit:junit:4.13.2")
