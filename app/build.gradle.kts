@@ -17,12 +17,27 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            // 使用固定的除錯金鑰，確保 CI 每次構建簽名一致，可覆蓋更新
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // 固定除錯簽名設定（金鑰檔案置於 repo 中，密碼為預設 android）
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
     compileOptions {
