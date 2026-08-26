@@ -1,6 +1,8 @@
 package com.example.violationrecorder.util
 
 import com.example.violationrecorder.data.ViolationRecord
+import org.dhatim.fastexcel.BorderSide
+import org.dhatim.fastexcel.BorderStyle
 import org.dhatim.fastexcel.Workbook
 import java.io.OutputStream
 
@@ -27,7 +29,7 @@ object ExcelExporter {
      * 將違規記錄匯出為 xlsx 格式，寫入指定的 OutputStream
      * @param outputStream 目標檔案串流（由 SAF 提供）
      * @param records 要匯出的記錄列表
-     * @param sheetName 工作表名稱（預設「違規記錄」）
+     * @param sheetName 工作表名稱
      */
     fun exportToExcel(
         outputStream: OutputStream,
@@ -38,29 +40,19 @@ object ExcelExporter {
         val ws = wb.newWorksheet(sheetName)
 
         // === 表頭（第 0 列）===
-        val headerStyle = wb.newStyle()
-            .bold()
-            .fillColor("D9E1F2") // 淺藍色底
-            .borderStyle(org.dhatim.fastexcel.BorderSide.TOP, org.dhatim.fastexcel.BorderStyle.THIN)
-            .borderStyle(org.dhatim.fastexcel.BorderSide.BOTTOM, org.dhatim.fastexcel.BorderStyle.THIN)
-            .borderStyle(org.dhatim.fastexcel.BorderSide.LEFT, org.dhatim.fastexcel.BorderStyle.THIN)
-            .borderStyle(org.dhatim.fastexcel.BorderSide.RIGHT, org.dhatim.fastexcel.BorderStyle.THIN)
-            .set()
-
         HEADERS.forEachIndexed { colIndex, header ->
             ws.value(0, colIndex, header)
-            ws.style(0, colIndex, headerStyle)
+            ws.style(0, colIndex)
+                .bold()
+                .fillColor("D9E1F2")
+                .borderStyle(BorderSide.TOP, BorderStyle.THIN)
+                .borderStyle(BorderSide.BOTTOM, BorderStyle.THIN)
+                .borderStyle(BorderSide.LEFT, BorderStyle.THIN)
+                .borderStyle(BorderSide.RIGHT, BorderStyle.THIN)
+                .set()
         }
 
         // === 資料列（從第 1 列開始）===
-        val cellStyle = wb.newStyle()
-            .borderStyle(org.dhatim.fastexcel.BorderSide.TOP, org.dhatim.fastexcel.BorderStyle.THIN)
-            .borderStyle(org.dhatim.fastexcel.BorderSide.BOTTOM, org.dhatim.fastexcel.BorderStyle.THIN)
-            .borderStyle(org.dhatim.fastexcel.BorderSide.LEFT, org.dhatim.fastexcel.BorderStyle.THIN)
-            .borderStyle(org.dhatim.fastexcel.BorderSide.RIGHT, org.dhatim.fastexcel.BorderStyle.THIN)
-            .wrapText(true)
-            .set()
-
         records.forEachIndexed { rowIndex, record ->
             val row = rowIndex + 1
             ws.value(row, 0, record.date)
@@ -71,20 +63,23 @@ object ExcelExporter {
             ws.value(row, 5, record.violationType)
 
             for (col in HEADERS.indices) {
-                ws.style(row, col, cellStyle)
+                ws.style(row, col)
+                    .borderStyle(BorderSide.TOP, BorderStyle.THIN)
+                    .borderStyle(BorderSide.BOTTOM, BorderStyle.THIN)
+                    .borderStyle(BorderSide.LEFT, BorderStyle.THIN)
+                    .borderStyle(BorderSide.RIGHT, BorderStyle.THIN)
+                    .wrapText(true)
+                    .set()
             }
         }
 
-        // === 設定欄寬 ===
-        ws.width(0, 12)  // 日期
-        ws.width(1, 10)  // 時間
-        ws.width(2, 40)  // 地址
-        ws.width(3, 12)  // 緯度
-        ws.width(4, 12)  // 經度
-        ws.width(5, 30)  // 違規樣態
-
-        // === 凍結表頭 ===
-        ws.freezeTopRow(1)
+        // === 設定欄寬（單位為字元寬度，Double 型別）===
+        ws.width(0, 12.0)  // 日期
+        ws.width(1, 10.0)  // 時間
+        ws.width(2, 40.0)  // 地址
+        ws.width(3, 12.0)  // 緯度
+        ws.width(4, 12.0)  // 經度
+        ws.width(5, 30.0)  // 違規樣態
 
         wb.finish()
     }
