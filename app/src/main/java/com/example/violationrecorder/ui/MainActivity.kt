@@ -102,12 +102,12 @@ class MainActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                val location = if (forceFresh) {
-                    // 主動要求新的 GPS 定位
-                    LocationUtil.requestFreshLocation(this@MainActivity)
-                } else {
-                    // 初始載入：先取快取位置
-                    LocationUtil.getLastKnownLocation(this@MainActivity)
+                // 不論初始或重新整理，都先嘗試取得新的 GPS 定位
+                var location = LocationUtil.requestFreshLocation(this@MainActivity)
+
+                // 初始載入時，若新定位失敗，降級使用快取位置作為備援
+                if (location == null && !forceFresh) {
+                    location = LocationUtil.getLastKnownLocation(this@MainActivity)
                 }
 
                 if (location != null) {
@@ -126,8 +126,8 @@ class MainActivity : AppCompatActivity() {
                     binding.tvLocationStatus.text = "無法取得位置，請確認 GPS 已開啟並移動到戶外"
                     Toast.makeText(
                         this@MainActivity,
-                        if (forceFresh) "定位逾時，請確認 GPS 已開啟" else "無法取得位置，請點擊重新定位",
-                        Toast.LENGTH_SHORT
+                        "定位失敗，請確認 GPS 已開啟後點擊重新定位",
+                        Toast.LENGTH_LONG
                     ).show()
                 }
             } catch (e: Exception) {

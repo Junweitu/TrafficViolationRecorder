@@ -155,60 +155,44 @@ object LocationUtil {
     }
 
     /**
-     * 格式化地址，優先呈現完整門牌號碼
-     * 台灣地址格式：縣市 + 鄉鎮市區 + 里 + 街道 + 門牌號碼
+     * 格式化地址
+     * 優先使用 Geocoder 提供的完整格式化地址（getAddressLine(0)），
+     * 因為它已經正確處理了門牌號碼、公路里程等細節。
+     * 只有在 getAddressLine(0) 為空時，才手動拼湊備援地址。
      */
     private fun formatAddress(address: Address): String {
+        // 優先使用 Geocoder 已格式化的完整地址
+        val fullAddress = address.getAddressLine(0)
+        if (!fullAddress.isNullOrBlank()) {
+            return fullAddress
+        }
+
+        // 備援：手動拼湊（僅在 getAddressLine 為空時使用）
         val sb = StringBuilder()
 
-        // 縣市（如：花蓮縣、台北市）
+        // 縣市
         address.adminArea?.let { sb.append(it) }
-
-        // 鄉鎮市區（如：花蓮市、吉安鄉）
+        // 鄉鎮市區
         address.locality?.let { sb.append(it) }
-
-        // 里（如：主農里）— 有時 Geocoder 會放在 subLocality
+        // 里
         address.subLocality?.let { sb.append(it) }
-
-        // 街道/路名（如：花東縱谷公路、中山路）
+        // 街道/路名
         address.thoroughfare?.let { sb.append(it) }
 
-        // 門牌號碼（subThoroughfare，如：114）
+        // 門牌號碼：只有 subThoroughfare 才是真正的門牌號碼
+        // 注意：featureName 可能是公路里程數（如「114」代表114公里處），不是門牌號碼，不可亂加「號」
         val houseNumber = address.subThoroughfare
         if (!houseNumber.isNullOrBlank()) {
             sb.append(houseNumber).append("號")
-        } else {
-            // 若 subThoroughfare 為空，嘗試從 featureName 擷取門牌號碼
-            // featureName 有時會是 "(114)" 或 "114號" 之類的格式
-            val feature = address.featureName
-            if (!feature.isNullOrBlank()) {
-                val num = extractHouseNumber(feature)
-                if (num != null) {
-                    sb.append(num).append("號")
-                } else {
-                    // 不是門牌號碼，當作建築物/地標附加在後面
-                    sb.append("（").append(feature).append("）")
-                }
-            }
         }
 
-        // 如果上面都沒東西，使用 addressLine 作為備援
-        return if (sb.isNotEmpty()) {
-            sb.toString()
-        } else {
-            address.getAddressLine(0) ?: "未知地址"
+        // 特徵名稱（如建築物、地名）附加在括號中
+        val feature = address.featureName
+        if (!feature.isNullOrBlank()) {
+            if (sb.isNotEmpty()) sb.append("（").append(feature).append("）")
+            else sb.append(feature)
         }
-    }
 
-    /**
-     * 從字串中擷取門牌號碼（支援 "(114)"、"114號"、"114" 等格式）
-     */
-    private fun extractHouseNumber(text: String): String? {
-        // 移除括號
-        val cleaned = text.trim().removeSurrounding("（", "）").removeSurrounding("(", ")")
-        // 移除「號」
-        val num = cleaned.removeSuffix("號").trim()
-        // 檢查是否為純數字（可含「之」、「-」、「樓」等）
-        return if (num.isNotEmpty() && num.any { it.isDigit() }) num else null
+        return if (sb.isNotEmpty()) sb.toString() else "未知地址"
     }
 }
